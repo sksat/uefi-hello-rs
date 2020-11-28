@@ -12,10 +12,19 @@ use core::panic::PanicInfo;
 mod uefi;
 use uefi::Status;
 
+static mut GLOBAL_STDOUT: Option<&uefi::SimpleTextOutputProtocol> = None;
+
 #[no_mangle]
-pub extern "efiapi" fn efi_main(_image: uefi::Handle, stable: uefi::SystemTable) -> Status {
+pub extern "efiapi" fn efi_main(
+    _image: uefi::Handle,
+    stable: &'static uefi::SystemTable,
+) -> Status {
     let stdout = stable.stdout();
+    unsafe {
+        GLOBAL_STDOUT = Some(stdout);
+    }
     stdout.reset(false);
+    //panic!("");
     stdout.output_string(utf16!("Hello, World!").as_ptr());
 
     loop {}
@@ -23,5 +32,10 @@ pub extern "efiapi" fn efi_main(_image: uefi::Handle, stable: uefi::SystemTable)
 
 #[panic_handler]
 fn panic(_panic: &PanicInfo<'_>) -> ! {
+    unsafe {
+        if let Some(s) = GLOBAL_STDOUT {
+            s.output_string(utf16!("panic").as_ptr());
+        }
+    }
     loop {}
 }
