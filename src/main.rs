@@ -2,6 +2,10 @@
 #![no_main]
 #![feature(asm)]
 #![feature(abi_efiapi)]
+#![feature(proc_macro_hygiene)]
+
+extern crate utf16_literal;
+use utf16_literal::utf16;
 
 use core::panic::PanicInfo;
 
@@ -10,18 +14,9 @@ use uefi::Status;
 
 #[no_mangle]
 pub extern "efiapi" fn efi_main(_image: uefi::Handle, stable: uefi::SystemTable) -> Status {
-    let hello = "Hello, World!".as_bytes();
-    let mut buf = [0u16; 15];
-
-    for i in 0..hello.len() {
-        buf[i] = hello[i] as u16;
-    }
-
-    let stdout = stable.con_out;
-    unsafe {
-        ((*stdout).reset)(&*stdout, false);
-        ((*stdout).output_string)(&*stdout, buf.as_ptr());
-    }
+    let stdout = stable.stdout();
+    stdout.reset(false);
+    stdout.output_string(utf16!("Hello, World!").as_ptr());
 
     loop {}
 }

@@ -27,13 +27,29 @@ pub struct SystemTable {
     pub console_handle: Handle,
     pub _con_in: usize,
     pub console_out_handle: Handle,
-    pub con_out: *const SimpleTextOutputProtocol,
+    pub con_out: *mut SimpleTextOutputProtocol,
 }
 
 #[repr(C)]
 pub struct SimpleTextOutputProtocol {
-    pub reset: unsafe extern "efiapi" fn(this: &SimpleTextOutputProtocol, _e: bool) -> Status,
-    pub output_string:
+    reset: unsafe extern "efiapi" fn(this: &SimpleTextOutputProtocol, extended: bool) -> Status,
+    output_string:
         unsafe extern "efiapi" fn(this: &SimpleTextOutputProtocol, string: *const u16) -> Status,
     _resb2: u128,
+}
+
+impl SystemTable {
+    pub fn stdout(&self) -> &mut SimpleTextOutputProtocol {
+        unsafe { &mut *self.con_out }
+    }
+}
+
+impl SimpleTextOutputProtocol {
+    pub fn reset(&self, extended: bool) -> Status {
+        unsafe { (self.reset)(self, extended) }
+    }
+
+    pub fn output_string(&self, string: *const u16) -> Status {
+        unsafe { (self.output_string)(self, string) }
+    }
 }
